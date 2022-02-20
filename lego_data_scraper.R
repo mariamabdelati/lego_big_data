@@ -1,6 +1,6 @@
 library(tidyverse)
 library(dplyr)
-#library(rvest)
+
 # get system's year to keep data updated
 current_year = lubridate::year(Sys.Date())
 page = 1
