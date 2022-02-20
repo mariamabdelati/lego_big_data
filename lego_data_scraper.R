@@ -170,12 +170,21 @@ getAge = function(setLink){
   return(set_age)
 }
 
+<<<<<<< HEAD
 setNumber = sapply(setLinks, FUN = getSetNumber, USE.NAMES = FALSE)
 themeGroup = sapply(setLinks, FUN = getThemeGroup, USE.NAMES = FALSE)
 theme = sapply(setLinks, FUN = getTheme, USE.NAMES = FALSE)
 subtheme = sapply(setLinks, FUN = getSubtheme, USE.NAMES = FALSE)
 year = sapply(setLinks, FUN = getYear, USE.NAMES = FALSE)
 age = sapply(setLinks, FUN = getAge, USE.NAMES = FALSE)
+=======
+setNumber = sapply(setLinks, FUN = getSetNumber)
+themeGroup = sapply(setLinks, FUN = getThemeGroup)
+theme = sapply(setLinks, FUN = getTheme)
+subtheme = sapply(setLinks, FUN = getSubtheme)
+year = sapply(setLinks, FUN = getYear)
+age = sapply(setLinks, FUN = getAge)
+>>>>>>> 7baa931d079a4300acace1bbe591f109c3f9aba1
 
 test = data.frame(setNumber, setName, age, rating, themeGroup, theme, subtheme, pieces, minifigs, RRP, PPP, year, packaging, availability, instructions, setType, stringsAsFactors = FALSE)
 head(test)
