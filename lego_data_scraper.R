@@ -1,91 +1,27 @@
 library(tidyverse)
 library(dplyr)
+library(rvest)
 
 # get system's year to keep data updated
 current_year = lubridate::year(Sys.Date())
 page = 1
 # define url to scrape
-url = glue::glue("https://brickset.com/sets/year-{current_year-1}/filter-Released/page-{page}")
+url = glue::glue("https://brickset.com/sets/year-{current_year-2}/filter-Released/page-{page}")
 
 # obtain html document from url
-legoData = read_html(url)
+lego_data = read_html(url)
 
-# obtain links for nested pages
-setLinks = legoData %>% 
-  html_nodes("h1 a") %>%
-  html_attr("href") %>%
-  paste("https://brickset.com/", ., sep = "")
+# multi-page get last page
+# first get the href of the last page
+lastPageRef = lego_data %>% 
+  html_nodes(".sets+ .pagination .last a") %>%
+  html_attr("href")
 
-# define table attributes; 
-# html nodes function is used to select parts of a document using CSS selectors
-# html text function is used to extract the text the selected nodes
-setName = legoData %>%
-  html_nodes(xpath = ".//h1/a/text()") %>%
-  html_text() %>%
-  str_trim()
+# take the href tag and extract the last page from that
+lastPage = stringr::word(lastPageRef, -1, sep = 'page-') %>% as.numeric()
 
-# sapply function is used to keep the data consistent in case of missing values
-# the function checks if the html node "rating" exists and if not it adds and NA 
-rating = legoData %>% 
-  html_nodes(".meta")
-
-rating = sapply(rating, function(feature){feature %>% 
-    html_nodes(xpath = ".//div[@class='rating']/span/text()") %>%
-    html_text() %>% 
-    str_trim() %>% as.character()}) %>% 
-  sapply(function(feature) ifelse(length(feature) == 0, NA, feature))
-
-features = legoData %>% 
-  html_nodes(".rating+ .col")
-pieces = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'Pieces']//following-sibling::dd/a/text()") %>%
-    html_text()
-  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-# minifigs = lego_data %>% 
-#   html_nodes(".rating+ .col")
-minifigs = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'Minifigs']//following-sibling::dd/a/text()") %>%
-    html_text()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-RRP = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'RRP']//following-sibling::dd/text()") %>%
-    html_text() %>%
-    str_trim() %>% as.character()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-PPP = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'PPP']//following-sibling::dd") %>%
-    html_text() %>%
-    str_trim() %>% as.character()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-packaging = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'Packaging']//following-sibling::dd") %>%
-    html_text() %>%
-    str_trim() %>% as.character()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-availability = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'Availability']//following-sibling::dd") %>%
-    html_text() %>%
-    str_trim() %>% as.character()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-instructions = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'Instructions']//following-sibling::dd/a/text()") %>%
-    html_text() %>%
-    str_trim() %>% as.character()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-setType = sapply(features,function(feature) {feature %>%
-    html_nodes(xpath ="./dl/dt[text() = 'Set type']//following-sibling::dd") %>%
-    html_text() %>%
-    str_trim() %>% as.character()
-}) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
-
-#nested pages attriute retrieval functions 
+#======================================nested pages attribute retrieval functions=============================================
+#nested pages attribute retrieval functions 
 getSetNumber = function(setLink){
   setPage = read_html(setLink) 
   details = setPage %>% 
@@ -169,13 +105,110 @@ getAge = function(setLink){
   
   return(set_age)
 }
+#===================================================================================
 
-setNumber = sapply(setLinks, FUN = getSetNumber, USE.NAMES = FALSE)
-themeGroup = sapply(setLinks, FUN = getThemeGroup, USE.NAMES = FALSE)
-theme = sapply(setLinks, FUN = getTheme, USE.NAMES = FALSE)
-subtheme = sapply(setLinks, FUN = getSubtheme, USE.NAMES = FALSE)
-year = sapply(setLinks, FUN = getYear, USE.NAMES = FALSE)
-age = sapply(setLinks, FUN = getAge, USE.NAMES = FALSE)
+#define dataframe
+legoDataFrame = data.frame()
 
-test = data.frame(setNumber, setName, age, rating, themeGroup, theme, subtheme, pieces, minifigs, RRP, PPP, year, packaging, availability, instructions, setType, stringsAsFactors = FALSE)
-head(test)
+# for loop is used to loop through the pages
+for (pageResult in seq(from = 22, to = lastPage, by = 1)){
+  pagination_link = glue::glue("https://brickset.com/sets/year-{current_year-2}/filter-Released/page-{pageResult}")
+  
+  legoData = read_html(pagination_link)
+  
+  # obtain links for nested pages
+  setLinks = legoData %>% 
+    html_nodes("h1 a") %>%
+    html_attr("href") %>%
+    paste("https://brickset.com/", ., sep = "")
+  
+  # define table attributes; 
+  # html nodes function is used to select parts of a document using CSS selectors
+  # html text function is used to extract the text the selected nodes
+  setName = legoData %>%
+    html_nodes(xpath = ".//h1/a/text()") %>%
+    html_text() %>%
+    str_trim()
+  
+  # sapply function is used to keep the data consistent in case of missing values
+  # the function checks if the html node "rating" exists and if not it adds and NA 
+  rating = legoData %>% 
+    html_nodes(".meta")
+  
+  rating = sapply(rating, function(feature){feature %>% 
+      html_nodes(xpath = ".//div[@class='rating']/span/text()") %>%
+      html_text() %>% 
+      str_trim() %>% as.character()}) %>% 
+    sapply(function(feature) ifelse(length(feature) == 0, NA, feature))
+  
+  features = legoData %>% 
+    html_nodes(".rating+ .col")
+  pieces = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'Pieces']//following-sibling::dd[1]/a/text()") %>%
+      html_text()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  minifigs = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'Minifigs']//following-sibling::dd[1]/a/text()") %>%
+      html_text()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  RRP = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'RRP']//following-sibling::dd[1]/text()") %>%
+      html_text() %>%
+      str_trim() %>% as.character()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  PPP = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'PPP']//following-sibling::dd[1]") %>%
+      html_text() %>%
+      str_trim() %>% as.character()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  packaging = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'Packaging']//following-sibling::dd[1]") %>%
+      html_text() %>%
+      str_trim() %>% as.character()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  availability = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'Availability']//following-sibling::dd[1]") %>%
+      html_text() %>%
+      str_trim() %>% as.character()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  instructions = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'Instructions']//following-sibling::dd[1]/a/text()") %>%
+      html_text() %>%
+      str_trim() %>% as.character()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  setType = sapply(features,function(feature) {feature %>%
+      html_nodes(xpath ="./dl/dt[text() = 'Set type']//following-sibling::dd[1]") %>%
+      html_text() %>%
+      str_trim() %>% as.character()
+  }) %>% sapply(function (feature) ifelse(length(feature) == 0, NA, feature))
+  
+  setNumber = sapply(setLinks, FUN = getSetNumber, USE.NAMES = FALSE)
+  themeGroup = sapply(setLinks, FUN = getThemeGroup, USE.NAMES = FALSE)
+  theme = sapply(setLinks, FUN = getTheme, USE.NAMES = FALSE)
+  subtheme = sapply(setLinks, FUN = getSubtheme, USE.NAMES = FALSE)
+  year = sapply(setLinks, FUN = getYear, USE.NAMES = FALSE)
+  age = sapply(setLinks, FUN = getAge, USE.NAMES = FALSE)
+  
+  # rbind is used to append the obtained data after each iteration
+  legoDataFrame = rbind(legoDataFrame, data.frame(setNumber, setName, age, rating, themeGroup, theme, subtheme, pieces, minifigs, RRP, PPP, year, packaging, availability, instructions, setType, stringsAsFactors = FALSE))
+  
+  print(paste("Page:", pageResult))
+  
+  head(legoDataFrame)
+}
+
+
+# write data to a LegoSetData.csv file
+write.table(legoDataFrame, file = "LegoSetsData.csv", sep = ",", append = TRUE, row.names = FALSE)
+
+
+
+
+
