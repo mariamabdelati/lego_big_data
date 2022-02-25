@@ -1,13 +1,8 @@
+#========================import libraries=====================
 library(tidyverse)
 library(dplyr)
 library(rvest)
-
-# get system's year to keep data updated
-# current_year = lubridate::year(Sys.Date())
-# page = 1
-
-#======================================nested pages attribute retrieval functions=============================================
-#nested pages attribute retrieval functions
+#==================nested pages attribute retrieval functions=====================
 getSetNumber = function(setLink) {
   setPage = read_html(setLink)
   details = setPage %>%
@@ -23,6 +18,7 @@ getSetNumber = function(setLink) {
   
   return(set_number)
 }
+
 
 getThemeGroup = function(setLink) {
   setPage = read_html(setLink)
@@ -131,7 +127,6 @@ for (releaseYear in seq(from = 1953, to = 2022, by = 1)) {
   
   # for loop is used to loop through the pages
   for (pageResult in seq(from = 1, to = lastPage, by = 1)) {
-    #22 year - 2
     pagination_link = glue::glue(
       "https://brickset.com/sets/year-{releaseYear}/filter-Released/page-{pageResult}"
     )
@@ -230,7 +225,8 @@ for (releaseYear in seq(from = 1953, to = 2022, by = 1)) {
     }) %>% sapply(function (feature)
       ifelse(length(feature) == 0, NA, feature))
     
-    setNumber = sapply(setLinks, FUN = getSetNumber, USE.NAMES = FALSE)
+    # retrieve data from nested pages 
+    setNumber = sapply(setLinks, FUN = getSetNumber, USE.NAMES = FALSE) 
     themeGroup = sapply(setLinks, FUN = getThemeGroup, USE.NAMES = FALSE)
     theme = sapply(setLinks, FUN = getTheme, USE.NAMES = FALSE)
     subtheme = sapply(setLinks, FUN = getSubtheme, USE.NAMES = FALSE)
@@ -262,7 +258,7 @@ for (releaseYear in seq(from = 1953, to = 2022, by = 1)) {
     )
     
     print(paste("Page:", pageResult))
-    Sys.sleep(2)
+    Sys.sleep(4)
     # head(legoDataFrame)
   }
   
@@ -273,4 +269,4 @@ for (releaseYear in seq(from = 1953, to = 2022, by = 1)) {
 # write data to a LegoSetData.csv file
 write.csv(legoDataFrame, file = "LegoSetsData.csv", row.names = FALSE)
 
-# write.table(legoDataFrame, file = "LegoSetsData.csv", sep = ",", append = TRUE, row.names = FALSE, column.names = FALSE)
+#write.table(legoDataFrame, file = "LegoSetsData.csv", sep = ",", append = TRUE, row.names = FALSE, col.names = FALSE)
