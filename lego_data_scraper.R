@@ -226,7 +226,9 @@ for (releaseYear in seq(from = 1953, to = 2022, by = 1)) {
       ifelse(length(feature) == 0, NA, feature))
     
     # retrieve data from nested pages 
+
     setNumber = sapply(setLinks, FUN = getSetNumber, USE.NAMES = FALSE) 
+
     themeGroup = sapply(setLinks, FUN = getThemeGroup, USE.NAMES = FALSE)
     theme = sapply(setLinks, FUN = getTheme, USE.NAMES = FALSE)
     subtheme = sapply(setLinks, FUN = getSubtheme, USE.NAMES = FALSE)
