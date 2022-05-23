@@ -27,5 +27,3 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 lego_data_scraper_2.R
-
-
